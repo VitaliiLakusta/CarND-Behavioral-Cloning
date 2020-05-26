@@ -18,7 +18,7 @@ import numpy as np
 # %%
 img = ndimage.imread('./data/IMG/center_2016_12_01_13_30_48_287.jpg')
 # crop image same way as used in model to see if right amount is cropped
-img = img[50:-20, :]
+img = img[70:-25, :]
 plt.imshow(img)
 
 #%% 
@@ -50,7 +50,7 @@ from keras.models import Sequential, Model
 from keras.layers import Lambda, Flatten, Dense, Cropping2D
 
 model = Sequential()
-model.add(Cropping2D(cropping=((50, 20), (0, 0)), input_shape=(160, 320, 3), name='crop_1'))
+model.add(Cropping2D(cropping=((70, 25), (0, 0)), input_shape=(160, 320, 3), name='crop_1'))
 model.add(Lambda(lambda x: (x / 255.0) - 0.5, name='normalize_1'))
 model.add(Flatten(name='flatten_1'))
 model.add(Dense(1, name="dense_1"))
