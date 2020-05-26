@@ -7,11 +7,11 @@ import numpy as np
 
 # input img size 160(y)x320(x)
 
-# TODO Crop images on top and bottom
+# DONE Crop images on top and bottom 
+# DONE Convert model to nvidia model
 # TODO: convert data fetching for training into generator function
 # TODO Apply angle correction for left and right images
 # TODO: flip images along horizontal axis as well -> more training data
-# TODO Convert model to nvidia one, train it on udacity's GPU.
 # TODO: If necessary, train with your own collected driving data, tune the model.
 
 
@@ -47,16 +47,28 @@ plt.imshow(X_train[50])
 
 # %%
 from keras.models import Sequential, Model
-from keras.layers import Lambda, Flatten, Dense, Cropping2D
+from keras.layers import Lambda, Flatten, Dense, Cropping2D, Convolution2D
 
 model = Sequential()
 model.add(Cropping2D(cropping=((70, 25), (0, 0)), input_shape=(160, 320, 3), name='crop_1'))
 model.add(Lambda(lambda x: (x / 255.0) - 0.5, name='normalize_1'))
+model.add(Convolution2D(24, 5, strides=(2,2), activation='relu', name='conv_1'))
+model.add(Convolution2D(36, 5, strides=(2,2), activation='relu', name='conv_2'))
+model.add(Convolution2D(48, 5, strides=(2,2), activation='relu', name='conv_3'))
+model.add(Convolution2D(64, 3, activation='relu', name='conv_4'))
+model.add(Convolution2D(64, 3, activation='relu', name='conv_5'))
 model.add(Flatten(name='flatten_1'))
-model.add(Dense(1, name="dense_1"))
+model.add(Dense(100, name="dense_1"))
+model.add(Dense(50, name="dense_2"))
+model.add(Dense(10, name="dense_3"))
+model.add(Dense(1, name="dense_4"))
+
+model.summary()
+
+#%% 
 
 model.compile(loss='mse', optimizer='adam')
-model.fit(X_train, y_train, validation_split=0.2, shuffle=True, epochs=7, verbose=1)
+model.fit(X_train, y_train, validation_split=0.2, shuffle=True, epochs=5, verbose=1)
 
 model.save('model.h5')
 model.save_weights('model_weights.h5')
