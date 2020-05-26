@@ -6,6 +6,7 @@ import csv
 import numpy as np
 import sklearn
 import math
+import random
 
 # input img size 160(y)x320(x)
 
@@ -37,6 +38,7 @@ train_samples, validation_samples = train_test_split(samples, test_size=0.2)
 def generator(samples, batch_size=32):
     num_samples = len(samples)
     while 1:
+        random.shuffle(samples)
         for offset in range(0, num_samples, batch_size):
             batch_samples = samples[offset:offset+batch_size]
             images = []
@@ -95,8 +97,8 @@ validation_generator = generator(validation_samples, batch_size=batch_size)
 
 model.compile(loss='mse', optimizer='adam')
 train_history = model.fit_generator(train_generator, \
-    steps_per_epoch=math.ceil(len(train_samples)*6/batch_size), \
-    validation_data=validation_generator, validation_steps=math.ceil(len(validation_samples)*6/batch_size), \
+    steps_per_epoch=math.ceil(len(train_samples)/batch_size), \
+    validation_data=validation_generator, validation_steps=math.ceil(len(validation_samples)/batch_size), \
     epochs=5, verbose=1)
 
 model.save('model.h5')
