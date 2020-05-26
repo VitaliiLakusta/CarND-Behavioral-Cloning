@@ -12,7 +12,7 @@ import math
 # DONE Crop images on top and bottom 
 # DONE Convert model to nvidia model
 # DONE Apply angle correction for left and right images
-# TODO: convert data fetching for training into generator function
+# DONE: convert data fetching for training into generator function
 # TODO: flip images along horizontal axis as well -> more training data
 # TODO: If necessary, train with your own collected driving data, tune the model.
 
@@ -33,6 +33,9 @@ samples = samples[1:]
 
 from sklearn.model_selection import train_test_split
 train_samples, validation_samples = train_test_split(samples, test_size=0.2)
+
+train_samples = train_samples[:10]
+validation_samples = validation_samples[:2]
 
 def generator(samples, batch_size=32):
     num_samples = len(samples)
@@ -89,12 +92,24 @@ train_generator = generator(train_samples, batch_size=batch_size)
 validation_generator = generator(validation_samples, batch_size=batch_size)
 
 model.compile(loss='mse', optimizer='adam')
-model.fit_generator(train_generator, \
+train_history = model.fit_generator(train_generator, \
     steps_per_epoch=math.ceil(len(train_samples)/batch_size), \
     validation_data=validation_generator, validation_steps=math.ceil(len(validation_samples)/batch_size), \
     epochs=5, verbose=1)
 
 model.save('model.h5')
 model.save_weights('model_weights.h5')
+
+# %%
+# Visualize loss
+print(train_history.history.keys())
+
+plt.plot(train_history.history['loss'])
+plt.plot(train_history.history['val_loss'])
+plt.title('model mean squared error loss')
+plt.ylabel('mean squared error loss')
+plt.xlabel('epoch')
+plt.legend(['training set', 'validation set'], loc='upper right')
+plt.show()
 
 # %%
