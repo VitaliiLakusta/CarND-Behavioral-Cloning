@@ -9,8 +9,8 @@ import numpy as np
 
 # DONE Crop images on top and bottom 
 # DONE Convert model to nvidia model
+# DONE Apply angle correction for left and right images
 # TODO: convert data fetching for training into generator function
-# TODO Apply angle correction for left and right images
 # TODO: flip images along horizontal axis as well -> more training data
 # TODO: If necessary, train with your own collected driving data, tune the model.
 
@@ -24,26 +24,31 @@ plt.imshow(img)
 #%% 
 lines = []
 with open('./data/driving_log.csv') as csvfile:
-    reader = csv.reader(csvfile, )
+    reader = csv.reader(csvfile, skipinitialspace=True)
     for line in reader:
         lines.append(line)
 lines = lines[1:]
 images = []
-measurements = []
+steering_angles = []
 for line in lines: 
-    source_path = line[0]
-    filename = source_path.split('/')[-1]
-    current_path = './data/IMG/' + filename
-    img = ndimage.imread(current_path)
-    images.append(img)
-    steering_angle = float(line[3])
-    measurements.append(steering_angle)
+    steering_center = float(line[3])
+    # create adjusted steering measurements for the side camera images
+    correction = 0.2
+    steering_left = steering_center + correction
+    steering_right = steering_center - correction
+
+    path = './data/'
+    img_center = ndimage.imread(path + line[0])
+    img_left = ndimage.imread(path + line[1])
+    img_right = ndimage.imread(path + line[2])
+
+    images.extend([img_center, img_left, img_right])
+    steering_angles.extend([steering_center, steering_left, steering_right])
 
 X_train = np.array(images)
-y_train = np.array(measurements)
+y_train = np.array(steering_angles)
 
-print(y_train[50])
-plt.imshow(X_train[50])
+print('X_train length: {}'.format(len(X_train)))
 
 # %%
 from keras.models import Sequential, Model
@@ -72,3 +77,5 @@ model.fit(X_train, y_train, validation_split=0.2, shuffle=True, epochs=5, verbos
 
 model.save('model.h5')
 model.save_weights('model_weights.h5')
+
+# %%
