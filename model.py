@@ -7,6 +7,7 @@ import numpy as np
 import sklearn
 import math
 import random
+import pickle
 
 # input img size 160(y)x320(x)
 
@@ -17,16 +18,17 @@ import random
 # DONE: flip images along horizontal axis as well -> more training data
 # TODO: If necessary, train with your own collected driving data, tune the model.
 
-
 # %%
-img = ndimage.imread('./data/IMG/center_2016_12_01_13_30_48_287.jpg')
-# crop image same way as used in model to see if right amount is cropped
-img = img[70:-25, :]
-plt.imshow(img)
+# img = ndimage.imread('./data/IMG/center_2016_12_01_13_30_48_287.jpg')
+# # crop image same way as used in model to see if right amount is cropped
+# img = img[70:-25, :]
+# plt.imshow(img)
 
+path = '/opt/carnd_p3/data/'
+# path = './data/'
 #%% 
 samples = []
-with open('./data/driving_log.csv') as csvfile:
+with open(path+'driving_log.csv') as csvfile:
     reader = csv.reader(csvfile, skipinitialspace=True)
     for row in reader:
         samples.append(row)
@@ -50,7 +52,6 @@ def generator(samples, batch_size=32):
                 steering_left = steering_center + correction
                 steering_right = steering_center - correction
 
-                path = './data/'
                 img_center = ndimage.imread(path + row[0])
                 img_left = ndimage.imread(path + row[1])
                 img_right = ndimage.imread(path + row[2])
@@ -103,13 +104,16 @@ train_history = model.fit_generator(train_generator, \
 
 model.save('model.h5')
 model.save_weights('model_weights.h5')
+with open('trainHistoryDict', 'wb') as file_pi:
+    pickle.dump(train_history.history, file_pi)
 
 # %%
 # Visualize loss
-print(train_history.history.keys())
 
-plt.plot(train_history.history['loss'])
-plt.plot(train_history.history['val_loss'])
+history = pickle.load(open('trainHistoryDict', 'rb'))
+
+plt.plot(history['loss'])
+plt.plot(history['val_loss'])
 plt.title('model mean squared error loss')
 plt.ylabel('mean squared error loss')
 plt.xlabel('epoch')
