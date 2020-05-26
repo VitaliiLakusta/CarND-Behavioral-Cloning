@@ -4,6 +4,8 @@ from scipy import ndimage
 import matplotlib.pyplot as plt
 import csv
 import numpy as np
+import sklearn
+import math
 
 # input img size 160(y)x320(x)
 
@@ -22,33 +24,41 @@ img = img[70:-25, :]
 plt.imshow(img)
 
 #%% 
-lines = []
+samples = []
 with open('./data/driving_log.csv') as csvfile:
     reader = csv.reader(csvfile, skipinitialspace=True)
-    for line in reader:
-        lines.append(line)
-lines = lines[1:]
-images = []
-steering_angles = []
-for line in lines: 
-    steering_center = float(line[3])
-    # create adjusted steering measurements for the side camera images
-    correction = 0.2
-    steering_left = steering_center + correction
-    steering_right = steering_center - correction
+    for row in reader:
+        samples.append(row)
+samples = samples[1:]
 
-    path = './data/'
-    img_center = ndimage.imread(path + line[0])
-    img_left = ndimage.imread(path + line[1])
-    img_right = ndimage.imread(path + line[2])
+from sklearn.model_selection import train_test_split
+train_samples, validation_samples = train_test_split(samples, test_size=0.2)
 
-    images.extend([img_center, img_left, img_right])
-    steering_angles.extend([steering_center, steering_left, steering_right])
+def generator(samples, batch_size=32):
+    num_samples = len(samples)
+    while 1:
+        for offset in range(0, num_samples, batch_size):
+            batch_samples = samples[offset:offset+batch_size]
+            images = []
+            steering_angles = []
+            for row in batch_samples: 
+                steering_center = float(row[3])
+                # create adjusted steering measurements for the side camera images
+                correction = 0.2
+                steering_left = steering_center + correction
+                steering_right = steering_center - correction
 
-X_train = np.array(images)
-y_train = np.array(steering_angles)
+                path = './data/'
+                img_center = ndimage.imread(path + row[0])
+                img_left = ndimage.imread(path + row[1])
+                img_right = ndimage.imread(path + row[2])
 
-print('X_train length: {}'.format(len(X_train)))
+                images.extend([img_center, img_left, img_right])
+                steering_angles.extend([steering_center, steering_left, steering_right])
+
+            X_train = np.array(images)
+            y_train = np.array(steering_angles)
+            yield sklearn.utils.shuffle(X_train, y_train)
 
 # %%
 from keras.models import Sequential, Model
@@ -72,8 +82,17 @@ model.summary()
 
 #%% 
 
+# TRAIN AND SAVE THE MODEL
+
+batch_size = 32
+train_generator = generator(train_samples, batch_size=batch_size)
+validation_generator = generator(validation_samples, batch_size=batch_size)
+
 model.compile(loss='mse', optimizer='adam')
-model.fit(X_train, y_train, validation_split=0.2, shuffle=True, epochs=5, verbose=1)
+model.fit_generator(train_generator, \
+    steps_per_epoch=math.ceil(len(train_samples)/batch_size), \
+    validation_data=validation_generator, validation_steps=math.ceil(len(validation_samples)/batch_size), \
+    epochs=5, verbose=1)
 
 model.save('model.h5')
 model.save_weights('model_weights.h5')
