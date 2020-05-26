@@ -13,7 +13,7 @@ import math
 # DONE Convert model to nvidia model
 # DONE Apply angle correction for left and right images
 # DONE: convert data fetching for training into generator function
-# TODO: flip images along horizontal axis as well -> more training data
+# DONE: flip images along horizontal axis as well -> more training data
 # TODO: If necessary, train with your own collected driving data, tune the model.
 
 
@@ -34,9 +34,6 @@ samples = samples[1:]
 from sklearn.model_selection import train_test_split
 train_samples, validation_samples = train_test_split(samples, test_size=0.2)
 
-train_samples = train_samples[:10]
-validation_samples = validation_samples[:2]
-
 def generator(samples, batch_size=32):
     num_samples = len(samples)
     while 1:
@@ -55,9 +52,14 @@ def generator(samples, batch_size=32):
                 img_center = ndimage.imread(path + row[0])
                 img_left = ndimage.imread(path + row[1])
                 img_right = ndimage.imread(path + row[2])
+                img_center_fl = np.fliplr(img_center)
+                img_left_fl = np.fliplr(img_left)
+                img_right_fl = np.fliplr(img_right)
 
-                images.extend([img_center, img_left, img_right])
-                steering_angles.extend([steering_center, steering_left, steering_right])
+                images.extend([img_center, img_center_fl, img_left, \
+                    img_left_fl, img_right, img_right_fl])
+                steering_angles.extend([steering_center, -steering_center, steering_left, \
+                     -steering_left, steering_right, -steering_right])
 
             X_train = np.array(images)
             y_train = np.array(steering_angles)
@@ -93,8 +95,8 @@ validation_generator = generator(validation_samples, batch_size=batch_size)
 
 model.compile(loss='mse', optimizer='adam')
 train_history = model.fit_generator(train_generator, \
-    steps_per_epoch=math.ceil(len(train_samples)/batch_size), \
-    validation_data=validation_generator, validation_steps=math.ceil(len(validation_samples)/batch_size), \
+    steps_per_epoch=math.ceil(len(train_samples)*6/batch_size), \
+    validation_data=validation_generator, validation_steps=math.ceil(len(validation_samples)*6/batch_size), \
     epochs=5, verbose=1)
 
 model.save('model.h5')
