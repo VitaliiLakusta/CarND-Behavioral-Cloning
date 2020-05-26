@@ -9,20 +9,15 @@ import math
 import random
 import pickle
 
-# input img size 160(y)x320(x)
-
-# DONE Crop images on top and bottom 
-# DONE Convert model to nvidia model
-# DONE Apply angle correction for left and right images
-# DONE: convert data fetching for training into generator function
-# DONE: flip images along horizontal axis as well -> more training data
-# TODO: If necessary, train with your own collected driving data, tune the model.
+# %%
+img = ndimage.imread('./data/IMG/center_2016_12_01_13_30_48_287.jpg')
+plt.imshow(img)
 
 # %%
-# img = ndimage.imread('./data/IMG/center_2016_12_01_13_30_48_287.jpg')
 # # crop image same way as used in model to see if right amount is cropped
-# img = img[70:-25, :]
-# plt.imshow(img)
+plt.imshow(img[70:-25, :])
+
+# %% 
 
 path = '/opt/carnd_p3/data/'
 # path = './data/'
