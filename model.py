@@ -9,19 +9,12 @@ import math
 import random
 import pickle
 
-# %%
-img = ndimage.imread('./data/IMG/center_2016_12_01_13_30_48_287.jpg')
-plt.imshow(img)
-
-# %%
-# # crop image same way as used in model to see if right amount is cropped
-plt.imshow(img[70:-25, :])
-
-# %% 
-
-path = '/opt/carnd_p3/data/'
-# path = './data/'
 #%% 
+### PROCESS CSV FILE
+
+# Uncomment path with /opt/... when training on Udacity's GPU workspace.
+# path = '/opt/carnd_p3/data/'
+path = './data/'
 samples = []
 with open(path+'driving_log.csv') as csvfile:
     reader = csv.reader(csvfile, skipinitialspace=True)
@@ -29,8 +22,40 @@ with open(path+'driving_log.csv') as csvfile:
         samples.append(row)
 samples = samples[1:]
 
-from sklearn.model_selection import train_test_split
-train_samples, validation_samples = train_test_split(samples, test_size=0.2)
+# %%
+# Show one image FROM csv 1st row, center camera
+img = ndimage.imread(path+samples[0][0])
+plt.imshow(img)
+
+# %%
+# Crop image same way as used in model to see if right amount is cropped
+plt.imshow(img[70:-25, :])
+
+# %%
+### CNN MODEL ARCHITECTURE
+# Taken from this Nvidia's paper: 
+# https://images.nvidia.com/content/tegra/automotive/images/2016/solutions/pdf/end-to-end-dl-using-px.pdf
+from keras.models import Sequential, Model
+from keras.layers import Lambda, Flatten, Dense, Cropping2D, Convolution2D
+
+model = Sequential()
+model.add(Cropping2D(cropping=((70, 25), (0, 0)), input_shape=(160, 320, 3), name='crop_1'))
+model.add(Lambda(lambda x: (x / 255.0) - 0.5, name='normalize_1'))
+model.add(Convolution2D(24, 5, strides=(2,2), activation='relu', name='conv_1'))
+model.add(Convolution2D(36, 5, strides=(2,2), activation='relu', name='conv_2'))
+model.add(Convolution2D(48, 5, strides=(2,2), activation='relu', name='conv_3'))
+model.add(Convolution2D(64, 3, activation='relu', name='conv_4'))
+model.add(Convolution2D(64, 3, activation='relu', name='conv_5'))
+model.add(Flatten(name='flatten_1'))
+model.add(Dense(100, name="dense_1"))
+model.add(Dense(50, name="dense_2"))
+model.add(Dense(10, name="dense_3"))
+model.add(Dense(1, name="dense_4"))
+
+model.summary()
+
+# %%
+### GENERATOR FOR MODEL TRAINING
 
 def generator(samples, batch_size=32):
     num_samples = len(samples)
@@ -62,48 +87,35 @@ def generator(samples, batch_size=32):
             X_train = np.array(images)
             y_train = np.array(steering_angles)
             yield sklearn.utils.shuffle(X_train, y_train)
-
-# %%
-from keras.models import Sequential, Model
-from keras.layers import Lambda, Flatten, Dense, Cropping2D, Convolution2D
-
-model = Sequential()
-model.add(Cropping2D(cropping=((70, 25), (0, 0)), input_shape=(160, 320, 3), name='crop_1'))
-model.add(Lambda(lambda x: (x / 255.0) - 0.5, name='normalize_1'))
-model.add(Convolution2D(24, 5, strides=(2,2), activation='relu', name='conv_1'))
-model.add(Convolution2D(36, 5, strides=(2,2), activation='relu', name='conv_2'))
-model.add(Convolution2D(48, 5, strides=(2,2), activation='relu', name='conv_3'))
-model.add(Convolution2D(64, 3, activation='relu', name='conv_4'))
-model.add(Convolution2D(64, 3, activation='relu', name='conv_5'))
-model.add(Flatten(name='flatten_1'))
-model.add(Dense(100, name="dense_1"))
-model.add(Dense(50, name="dense_2"))
-model.add(Dense(10, name="dense_3"))
-model.add(Dense(1, name="dense_4"))
-
-model.summary()
-
 #%% 
-
-# TRAIN AND SAVE THE MODEL
+### TRAIN AND SAVE THE MODEL
+from sklearn.model_selection import train_test_split
 
 batch_size = 32
+train_samples, validation_samples = train_test_split(samples, test_size=0.2)
 train_generator = generator(train_samples, batch_size=batch_size)
 validation_generator = generator(validation_samples, batch_size=batch_size)
 
+
 model.compile(loss='mse', optimizer='adam')
+print("Starting training...")
 train_history = model.fit_generator(train_generator, \
     steps_per_epoch=math.ceil(len(train_samples)/batch_size), \
     validation_data=validation_generator, validation_steps=math.ceil(len(validation_samples)/batch_size), \
     epochs=5, verbose=1)
+print("Model trained")
 
+# Save model, model weights, and training history into pickle file
+print("Saving model...")
 model.save('model.h5')
 model.save_weights('model_weights.h5')
+print("Model saved")
 with open('trainHistoryDict', 'wb') as file_pi:
     pickle.dump(train_history.history, file_pi)
+    print("Model training history saved")
 
 # %%
-# Visualize loss
+### VISUALIZE TRAINING AND VALIDATION LOSS
 
 history = pickle.load(open('trainHistoryDict', 'rb'))
 
